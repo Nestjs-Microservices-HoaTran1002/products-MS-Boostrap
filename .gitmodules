@@ -1,0 +1,3 @@
+[submodule "api-getway"]
+	path = api-getway
+	url = https://github.com/Nestjs-Microservices-HoaTran1002/api-getway.git
