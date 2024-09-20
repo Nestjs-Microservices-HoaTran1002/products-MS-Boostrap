@@ -2,3 +2,6 @@
 [submodule "api-getway"]
 	path = api-getway
 	url = https://github.com/Nestjs-Microservices-HoaTran1002/products-MS-Boostrap.git
+[submodule "products-Microservices"]
+	path = products-Microservices
+	url = https://github.com/Nestjs-Microservices-HoaTran1002/products-Microservices.git
