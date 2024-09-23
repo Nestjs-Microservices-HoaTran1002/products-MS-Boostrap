@@ -1,14 +1,10 @@
 version: '3'
 
-
 services:
-
-  
   nats-server:
     image: nats:latest
     ports:
       - "8222:8222"
-    
 
   client-gateway:
     build: ./api-getway
@@ -31,8 +27,6 @@ services:
       - NATS_SERVERS=nats://nats-server:4222
       - DATABASE_URL=file:./dev.db
 
-  
-  # Orders MS
   orders-ms:
     depends_on:
       - orders-db
@@ -45,9 +39,6 @@ services:
       - DATABASE_URL=postgresql://postgres:123456@orders-db:5432/ordersdb?schema=public
       - NATS_SERVERS=nats://nats-server:4222
 
-
-
-  # Orders DB
   orders-db:
     container_name: orders_database
     image: postgres:16.2
@@ -55,8 +46,45 @@ services:
     volumes:
       - ./orders-ms/postgres:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - POSTGRES_DB=ordersdb
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.0.1
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=datasearch
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.initial_master_nodes=elasticsearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.0.1
+    container_name: logstash
+    ports:
+      - "5044:5044"  
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf  
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.0.1
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+volumes:
+  esdata:
+    driver: local
