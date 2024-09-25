@@ -51,7 +51,23 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - POSTGRES_DB=ordersdb
-
+  payments-ms:
+    depends_on:
+      - orders-db
+    build: ./payments-microservices
+    volumes:
+      - ./payments-microservices/src:/usr/src/app/src
+    command: npm run start:dev
+    environment:
+      - PORT=${PAYMENTS_MS_PORT}
+      - NATS_SERVERS=nats://nats-server:4222
+      - STRIPE_SECRET=${STRIPE_SECRET}
+      - SUCCESS_URL=${SUCCESS_URL}
+      - CANCEL_URL=${CANCEL_URL}
+      - STRIPE_ENDPOINT_SECRET=${STRIPE_ENDPOINT_SECRET}
+#==================================================================
+#ELASTICSEARCH 
+#==================================================================
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.0.1
     container_name: elasticsearch
