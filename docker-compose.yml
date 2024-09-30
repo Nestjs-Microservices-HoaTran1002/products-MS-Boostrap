@@ -6,6 +6,11 @@ services:
     ports:
       - "4222:4222"
       - "8222:8222"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8222/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   client-gateway:
     build: ./api-gateway
@@ -17,8 +22,11 @@ services:
     environment:
       - PORT=3000
       - NATS_SERVERS=nats://nats-server:4222
-
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   auth-ms:
     build: ./auth-ms
@@ -30,21 +38,26 @@ services:
       - NATS_SERVERS=nats://nats-server:4222
       - DATABASE_URL=${AUTH_DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-
-
-  # products-ms:
-  #   build: ./products-Microservices
-  #   volumes:
-  #     - ./products-Microservices/src:/usr/src/app/src
-  #   command: npm run start:dev
-  #   environment:
-  #     - PORT=3001
-  #     - NATS_SERVERS=nats://nats-server:4222
-  #     - DATABASE_URL=file:./dev.db
-
-
-
+  products-ms:
+    build: ./products-Microservices
+    volumes:
+      - ./products-Microservices/src:/usr/src/app/src
+    command: npm run start:dev
+    environment:
+      - PORT=3001
+      - NATS_SERVERS=nats://nats-server:4222
+      - DATABASE_URL=file:./dev.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   orders-ms:
     depends_on:
@@ -57,6 +70,11 @@ services:
       - PORT=3002
       - DATABASE_URL=postgresql://postgres:123456@orders-db:5432/ordersdb?schema=public
       - NATS_SERVERS=nats://nats-server:4222
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   orders-db:
     container_name: orders_database
@@ -70,55 +88,64 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - POSTGRES_DB=ordersdb
-  # payments-ms:
-  #   depends_on:
-  #     - orders-db
-  #   build: ./payments-microservices
-  #   volumes:
-  #     - ./payments-microservices/src:/usr/src/app/src
-  #   command: npm run start:dev
-  #   environment:
-  #     - PORT=${PAYMENTS_MS_PORT}
-  #     - NATS_SERVERS=nats://nats-server:4222
-  #     - STRIPE_SECRET=${STRIPE_SECRET}
-  #     - SUCCESS_URL=${SUCCESS_URL}
-  #     - CANCEL_URL=${CANCEL_URL}
-  #     - STRIPE_ENDPOINT_SECRET=${STRIPE_ENDPOINT_SECRET}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  payments-ms:
+    build: ./payments-microservices
+    volumes:
+      - ./payments-microservices/src:/usr/src/app/src
+    command: npm run start:dev
+    environment:
+      - PORT=${PAYMENTS_MS_PORT}
+      - NATS_SERVERS=nats://nats-server:4222
+      - STRIPE_SECRET=${STRIPE_SECRET}
+      - SUCCESS_URL=${SUCCESS_URL}
+      - CANCEL_URL=${CANCEL_URL}
+      - STRIPE_ENDPOINT_SECRET=${STRIPE_ENDPOINT_SECRET}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 #==================================================================
 #ELASTICSEARCH 
 #==================================================================
-  # elasticsearch:
-  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.0.1
-  #   container_name: elasticsearch
-  #   environment:
-  #     - node.name=elasticsearch
-  #     - cluster.name=datasearch
-  #     - bootstrap.memory_lock=true
-  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-  #     - cluster.initial_master_nodes=elasticsearch
-  #   ulimits:
-  #     memlock:
-  #       soft: -1
-  #       hard: -1
-  #   ports:
-  #     - "9200:9200"
-  #   volumes:
-  #     - esdata:/usr/share/elasticsearch/data
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.0.1
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=datasearch
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.initial_master_nodes=elasticsearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
 
-  # logstash:
-  #   image: docker.elastic.co/logstash/logstash:7.0.1
-  #   container_name: logstash
-  #   ports:
-  #     - "5044:5044"  
-  #   volumes:
-  #     - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf  
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.0.1
+    container_name: logstash
+    ports:
+      - "5044:5044"  
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf  
 
-  # kibana:
-  #   image: docker.elastic.co/kibana/kibana:7.0.1
-  #   ports:
-  #     - "5601:5601"
-  #   depends_on:
-  #     - elasticsearch
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.0.1
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
 
 volumes:
   esdata:
